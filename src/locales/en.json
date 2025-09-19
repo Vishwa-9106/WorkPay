@@ -1,0 +1,84 @@
+{
+  "app": {
+    "name": "WorkPay",
+    "tagline": "Professional Workforce Management"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "workers": "Workers",
+    "production": "Daily Production", 
+    "expenses": "Expenses",
+    "reports": "Reports"
+  },
+  "common": {
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "date": "Date",
+    "name": "Name",
+    "phone": "Phone",
+    "amount": "Amount",
+    "quantity": "Quantity",
+    "total": "Total",
+    "submit": "Submit",
+    "reset": "Reset"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "totalWorkers": "Total Workers",
+    "totalExpenses": "Total Expenses",
+    "totalProfit": "Total Profit",
+    "profitLossChart": "Profit/Loss Overview",
+    "recentActivity": "Recent Activity"
+  },
+  "workers": {
+    "title": "Workers Management",
+    "addWorker": "Add Worker",
+    "editWorker": "Edit Worker",
+    "workerName": "Worker Name",
+    "phoneNumber": "Phone Number",
+    "dailyWage": "Daily Wage",
+    "noWorkers": "No workers added yet",
+    "addFirstWorker": "Add your first worker to get started"
+  },
+  "production": {
+    "title": "Daily Production",
+    "addProduction": "Add Production Entry",
+    "serialNumber": "Serial Number",
+    "workerName": "Worker Name",
+    "machineNumber": "Machine Number",
+    "quantityProduced": "Quantity Produced",
+    "selectWorker": "Select Worker",
+    "addRow": "Add Row",
+    "noProduction": "No production entries yet",
+    "addFirstEntry": "Add your first production entry"
+  },
+  "expenses": {
+    "title": "Expenses Management",
+    "addExpense": "Add Expense",
+    "expenseType": "Expense Type",
+    "noExpenses": "No expenses recorded yet",
+    "addFirstExpense": "Add your first expense"
+  },
+  "reports": {
+    "title": "Reports & Analytics",
+    "monthlyReport": "Monthly Report",
+    "yearlyReport": "Yearly Report",
+    "profitLossChart": "Profit/Loss Chart",
+    "exportPDF": "Export as PDF",
+    "noData": "No data available for reports",
+    "addDataFirst": "Add workers, production, and expenses to generate reports"
+  },
+  "forms": {
+    "required": "This field is required",
+    "invalidPhone": "Please enter a valid phone number",
+    "invalidAmount": "Please enter a valid amount",
+    "success": "Operation completed successfully",
+    "error": "An error occurred. Please try again."
+  }
+}
