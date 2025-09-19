@@ -3,9 +3,12 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
-import { Outlet } from "react-router-dom";
 
-export function Layout() {
+interface LayoutProps {
+  children: React.ReactNode;
+}
+
+export function Layout({ children }: LayoutProps) {
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex w-full bg-background">
@@ -15,11 +18,7 @@ export function Layout() {
           {/* Header */}
           <header className="h-16 bg-card border-b border-border flex items-center justify-between px-4 shadow-sm">
             <div className="flex items-center gap-4">
-              <SidebarTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <Menu className="h-4 w-4" />
-                </Button>
-              </SidebarTrigger>
+              <SidebarTrigger />
             </div>
             
             <div className="flex items-center gap-4">
@@ -29,7 +28,7 @@ export function Layout() {
 
           {/* Main Content */}
           <main className="flex-1 p-6 bg-background">
-            <Outlet />
+            {children}
           </main>
         </div>
       </div>
