@@ -9,7 +9,8 @@
     "production": "Daily Production", 
     "expenses": "Expenses",
     "reports": "Reports",
-    "companyProduct": "Company Product"
+    "companyProduct": "Company Product",
+    "salary": "Salary"
   },
   "common": {
     "add": "Add",
@@ -87,6 +88,11 @@
     "exportPDF": "Export as PDF",
     "noData": "No data available for reports",
     "addDataFirst": "Add workers, production, and expenses to generate reports"
+  },
+  "salary": {
+    "title": "Salary",
+    "loading": "Loading workers...",
+    "noWorkers": "No workers found"
   },
   "forms": {
     "required": "This field is required",

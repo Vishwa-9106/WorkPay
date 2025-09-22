@@ -5,6 +5,7 @@ import {
   Receipt,
   FileBarChart,
   Package,
+  Wallet,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useTranslation } from 'react-i18next';
@@ -24,31 +25,43 @@ export function AppSidebar() {
   const currentPath = location.pathname;
 
   const menuItems = [
+    // 1. Dashboard
     {
       title: t('nav.dashboard'),
       url: "/",
       icon: LayoutDashboard,
     },
-    {
-      title: t('nav.workers'),
-      url: "/workers",
-      icon: Users,
-    },
+    // 2. Daily production
     {
       title: t('nav.production'),
       url: "/production",
       icon: Factory,
     },
+    // Salary
+    {
+      title: t('nav.salary'),
+      url: "/salary",
+      icon: Wallet,
+    },
+    // 3. Company product
     {
       title: t('nav.companyProduct'),
       url: "/products",
       icon: Package,
     },
+    // 4. Workers
+    {
+      title: t('nav.workers'),
+      url: "/workers",
+      icon: Users,
+    },
+    // 5. Expenses
     {
       title: t('nav.expenses'),
       url: "/expenses",
       icon: Receipt,
     },
+    // 6. Reports
     {
       title: t('nav.reports'),
       url: "/reports",

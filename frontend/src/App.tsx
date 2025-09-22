@@ -9,6 +9,8 @@ import Workers from "./pages/Workers";
 import Production from "./pages/Production";
 import Expenses from "./pages/Expenses";
 import Reports from "./pages/Reports";
+import Salary from "./pages/Salary";
+import SalaryLoomOperator from "./pages/SalaryLoomOperator";
 import NotFound from "./pages/NotFound";
 import CompanyProduct from "./pages/CompanyProduct";
 import "@/lib/i18n";
@@ -26,6 +28,8 @@ const App = () => (
             <Route index element={<Dashboard />} />
             <Route path="workers" element={<Workers />} />
             <Route path="production" element={<Production />} />
+            <Route path="salary" element={<Salary />} />
+            <Route path="salary/loom-operator/:workerId" element={<SalaryLoomOperator />} />
             <Route path="expenses" element={<Expenses />} />
             <Route path="reports" element={<Reports />} />
             <Route path="products" element={<CompanyProduct />} />
