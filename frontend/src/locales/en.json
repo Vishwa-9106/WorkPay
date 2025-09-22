@@ -8,7 +8,8 @@
     "workers": "Workers",
     "production": "Daily Production", 
     "expenses": "Expenses",
-    "reports": "Reports"
+    "reports": "Reports",
+    "companyProduct": "Company Product"
   },
   "common": {
     "add": "Add",
@@ -45,6 +46,19 @@
     "dailyWage": "Daily Wage",
     "noWorkers": "No workers added yet",
     "addFirstWorker": "Add your first worker to get started"
+  },
+  "products": {
+    "title": "Company Product",
+    "subtitle": "Manage company products",
+    "addProduct": "Add Product",
+    "editProduct": "Edit Product",
+    "productName": "Product Name",
+    "workerSalary": "Salary for the Product for worker",
+    "ownerSalary": "Salary for the owner",
+    "listTitle": "Products List",
+    "loading": "Loading products...",
+    "noProducts": "No products added yet",
+    "addFirstProduct": "Add your first product to get started"
   },
   "production": {
     "title": "Daily Production",

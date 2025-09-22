@@ -1,73 +1,67 @@
-# Welcome to your Lovable project
+# WorkPay
 
-## Project info
+A full-stack application for managing work and payments.
 
-**URL**: https://lovable.dev/projects/17453d09-4025-4094-a386-abd25f3acf7b
+## Project Structure
 
-## How can I edit this code?
+```
+WorkPay/
+├── frontend/          # React + Vite frontend application
+│   ├── src/
+│   ├── public/
+│   ├── package.json
+│   └── ...
+├── backend/           # Node.js + Express backend API
+│   ├── src/
+│   ├── package.json
+│   └── ...
+└── README.md
+```
 
-There are several ways of editing your application.
+## Getting Started
 
-**Use Lovable**
+### Frontend Development
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/17453d09-4025-4094-a386-abd25f3acf7b) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+cd frontend
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The frontend will be available at `http://localhost:5173`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Backend Development
 
-**Use GitHub Codespaces**
+```bash
+cd backend
+npm install
+npm run dev
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+The backend will be available at `http://localhost:5000`
 
-## What technologies are used for this project?
+## Features
 
-This project is built with:
+- Modern React frontend with TypeScript
+- Express.js backend with RESTful API
+- Tailwind CSS for styling
+- Component library with shadcn/ui
+- Internationalization support
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Development
 
-## How can I deploy this project?
+1. Start the backend server first
+2. Start the frontend development server
+3. Both servers support hot reload for development
 
-Simply open [Lovable](https://lovable.dev/projects/17453d09-4025-4094-a386-abd25f3acf7b) and click on Share -> Publish.
+## Scripts
 
-## Can I connect a custom domain to my Lovable project?
+### Frontend
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
 
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+### Backend
+- `npm run dev` - Start development server with nodemon
+- `npm start` - Start production server
+- `npm test` - Run tests

@@ -1,4 +1,4 @@
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Outlet } from "react-router-dom";
@@ -11,11 +11,7 @@ export function Layout() {
         
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <header className="h-16 bg-card border-b border-border flex items-center justify-between px-4 shadow-sm">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger />
-            </div>
-            
+          <header className="h-16 bg-card border-b border-border flex items-center justify-end px-4 shadow-sm">
             <div className="flex items-center gap-4">
               <LanguageSwitcher />
             </div>

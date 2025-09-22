@@ -10,6 +10,7 @@ import Production from "./pages/Production";
 import Expenses from "./pages/Expenses";
 import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
+import CompanyProduct from "./pages/CompanyProduct";
 import "@/lib/i18n";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="production" element={<Production />} />
             <Route path="expenses" element={<Expenses />} />
             <Route path="reports" element={<Reports />} />
+            <Route path="products" element={<CompanyProduct />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

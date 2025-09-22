@@ -50,7 +50,10 @@ All colors MUST be HSL.
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
 
-    /* Warning color */
+    /* Existing styles */
+
+    
+
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
@@ -156,4 +159,18 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Hide number input steppers when using the 'no-spinner' class */
+/* Chrome, Safari, Edge, Opera */
+input[type="number"].no-spinner::-webkit-outer-spin-button,
+input[type="number"].no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type="number"].no-spinner {
+  appearance: textfield;
+  -moz-appearance: textfield;
 }

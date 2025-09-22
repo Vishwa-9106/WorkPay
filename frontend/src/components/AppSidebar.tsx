@@ -4,6 +4,7 @@ import {
   Factory,
   Receipt,
   FileBarChart,
+  Package,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useTranslation } from 'react-i18next';
@@ -14,14 +15,10 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
-  useSidebar,
 } from "@/components/ui/sidebar";
 
 export function AppSidebar() {
-  const { open } = useSidebar();
   const location = useLocation();
   const { t } = useTranslation();
   const currentPath = location.pathname;
@@ -43,6 +40,11 @@ export function AppSidebar() {
       icon: Factory,
     },
     {
+      title: t('nav.companyProduct'),
+      url: "/products",
+      icon: Package,
+    },
+    {
       title: t('nav.expenses'),
       url: "/expenses",
       icon: Receipt,
@@ -55,18 +57,14 @@ export function AppSidebar() {
   ];
 
   const isActive = (path: string) => currentPath === path;
-  const getNavClass = ({ isActive }: { isActive: boolean }) =>
-    isActive 
-      ? "bg-primary text-primary-foreground font-medium" 
-      : "hover:bg-accent hover:text-accent-foreground";
 
   return (
-    <Sidebar className={open ? "w-60" : "w-14"} collapsible="icon">
+    <Sidebar className="w-60" collapsible="none">
       <div className="flex items-center p-4 border-b border-sidebar-border">
         <div className="bg-gradient-primary rounded-lg p-2 mr-3">
           <Factory className="h-6 w-6 text-primary-foreground" />
         </div>
-        {open && (
+        {(
           <div>
             <h1 className="text-lg font-semibold text-sidebar-foreground">{t('app.name')}</h1>
             <p className="text-xs text-muted-foreground">{t('app.tagline')}</p>
@@ -77,22 +75,27 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="text-muted-foreground">
-            {open && "Navigation"}
+            Navigation
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/"}
-                      className={getNavClass}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {open && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
+                  <NavLink
+                    to={item.url}
+                    end={item.url === "/"}
+                    className={({ isActive }) => `
+                      flex w-full items-center gap-2 rounded-md p-2 text-left text-sm outline-none
+                      transition-colors focus-visible:ring-2 focus-visible:ring-sidebar-ring
+                      ${isActive 
+                        ? "bg-primary text-primary-foreground font-medium" 
+                        : "text-sidebar-foreground"
+                      }
+                    `}
+                  >
+                    <item.icon className="h-4 w-4 flex-shrink-0" />
+                    <span className="block">{item.title}</span>
+                  </NavLink>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,14 +6,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2, Users } from "lucide-react";
+import { Plus, Edit, Trash2, Users, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { workerApi, ApiError } from "@/lib/api";
 
 interface Worker {
-  id: string;
+  _id: string;
   name: string;
   phone: string;
-  dailyWage: number;
+  powerLoomNumber?: number;
+  role?: 'Loom Operator' | 'Mechanic' | 'Loader';
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export default function Workers() {
@@ -22,21 +27,55 @@ export default function Workers() {
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingWorker, setEditingWorker] = useState<Worker | null>(null);
-  const [formData, setFormData] = useState({
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [formData, setFormData] = useState<{ name: string; phone: string; powerLoomNumber: string; role: string }>({
     name: '',
     phone: '',
-    dailyWage: '',
+    powerLoomNumber: '',
+    role: '',
   });
 
+  // Fetch workers from API
+  const fetchWorkers = async () => {
+    try {
+      setLoading(true);
+      const data = await workerApi.getAll();
+      setWorkers(data);
+    } catch (error) {
+      console.error('Error fetching workers:', error);
+      if (error instanceof ApiError) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to load workers. Please check if the server is running.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load workers on component mount
+  useEffect(() => {
+    fetchWorkers();
+  }, []);
+
   const resetForm = () => {
-    setFormData({ name: '', phone: '', dailyWage: '' });
+    setFormData({ name: '', phone: '', powerLoomNumber: '', role: '' });
     setEditingWorker(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.phone || !formData.dailyWage) {
+    if (!formData.name || !formData.phone) {
       toast({
         title: "Error",
         description: t('forms.required'),
@@ -45,29 +84,65 @@ export default function Workers() {
       return;
     }
 
-    const workerData = {
-      id: editingWorker?.id || Date.now().toString(),
-      name: formData.name,
-      phone: formData.phone,
-      dailyWage: parseFloat(formData.dailyWage),
-    };
+    setSubmitting(true);
 
-    if (editingWorker) {
-      setWorkers(workers.map(w => w.id === editingWorker.id ? workerData : w));
-      toast({
-        title: "Success",
-        description: "Worker updated successfully",
-      });
-    } else {
-      setWorkers([...workers, workerData]);
-      toast({
-        title: "Success",
-        description: "Worker added successfully",
-      });
+    try {
+      let result: Worker;
+      
+      if (editingWorker) {
+        result = await workerApi.update(editingWorker._id, {
+          name: formData.name,
+          phone: formData.phone,
+          powerLoomNumber: formData.powerLoomNumber ? Number(formData.powerLoomNumber) : undefined,
+          role: formData.role || undefined,
+        });
+        
+        // Update existing worker in local state
+        setWorkers(workers.map(w => 
+          w._id === editingWorker._id ? result : w
+        ));
+        
+        toast({
+          title: "Success",
+          description: "Worker updated successfully",
+        });
+      } else {
+        result = await workerApi.create({
+          name: formData.name,
+          phone: formData.phone,
+          powerLoomNumber: formData.powerLoomNumber ? Number(formData.powerLoomNumber) : undefined,
+          role: formData.role || undefined,
+        });
+        
+        // Add new worker to local state
+        setWorkers([...workers, result]);
+        
+        toast({
+          title: "Success",
+          description: "Worker added successfully",
+        });
+      }
+      
+      resetForm();
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving worker:', error);
+      if (error instanceof ApiError) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to save worker. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setSubmitting(false);
     }
-
-    resetForm();
-    setIsDialogOpen(false);
   };
 
   const handleEdit = (worker: Worker) => {
@@ -75,17 +150,39 @@ export default function Workers() {
     setFormData({
       name: worker.name,
       phone: worker.phone,
-      dailyWage: worker.dailyWage.toString(),
+      powerLoomNumber: worker.powerLoomNumber != null ? String(worker.powerLoomNumber) : '',
+      role: worker.role ?? '',
     });
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (workerId: string) => {
-    setWorkers(workers.filter(w => w.id !== workerId));
-    toast({
-      title: "Success",
-      description: "Worker deleted successfully",
-    });
+  const handleDelete = async (workerId: string) => {
+    try {
+      await workerApi.delete(workerId);
+      
+      // Remove worker from local state
+      setWorkers(workers.filter(w => w._id !== workerId));
+      
+      toast({
+        title: "Success",
+        description: "Worker deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting worker:', error);
+      if (error instanceof ApiError) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to delete worker. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   return (
@@ -119,6 +216,7 @@ export default function Workers() {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Enter worker name"
                   className="bg-background border-input"
+                  disabled={submitting}
                 />
               </div>
               <div className="space-y-2">
@@ -129,18 +227,34 @@ export default function Workers() {
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder="Enter phone number"
                   className="bg-background border-input"
+                  disabled={submitting}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="wage" className="text-foreground">{t('workers.dailyWage')}</Label>
+                <Label htmlFor="powerLoomNumber" className="text-foreground">Power Loom Number</Label>
                 <Input
-                  id="wage"
-                  type="number"
-                  value={formData.dailyWage}
-                  onChange={(e) => setFormData({ ...formData, dailyWage: e.target.value })}
-                  placeholder="Enter daily wage"
+                  id="powerLoomNumber"
+                  value={formData.powerLoomNumber}
+                  onChange={(e) => setFormData({ ...formData, powerLoomNumber: e.target.value })}
+                  placeholder="Enter power loom number"
                   className="bg-background border-input"
+                  disabled={submitting}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="role" className="text-foreground">Role</Label>
+                <select
+                  id="role"
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  className="bg-background border-input"
+                  disabled={submitting}
+                >
+                  <option value="">Select role</option>
+                  <option value="Loom Operator">Loom Operator</option>
+                  <option value="Mechanic">Mechanic</option>
+                  <option value="Loader">Loader</option>
+                </select>
               </div>
               <div className="flex justify-end gap-2 pt-4">
                 <Button 
@@ -151,11 +265,19 @@ export default function Workers() {
                     setIsDialogOpen(false);
                   }}
                   className="border-border"
+                  disabled={submitting}
                 >
                   {t('common.cancel')}
                 </Button>
-                <Button type="submit" className="bg-gradient-primary hover:bg-primary-hover">
-                  {t('common.save')}
+                <Button type="submit" className="bg-gradient-primary hover:bg-primary-hover" disabled={submitting}>
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {editingWorker ? 'Updating...' : 'Adding...'}
+                    </>
+                  ) : (
+                    t('common.save')
+                  )}
                 </Button>
               </div>
             </form>
@@ -172,7 +294,12 @@ export default function Workers() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {workers.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-8">
+              <Loader2 className="mx-auto h-12 w-12 text-muted-foreground mb-4 animate-spin" />
+              <p className="text-lg text-muted-foreground">Loading workers...</p>
+            </div>
+          ) : workers.length === 0 ? (
             <div className="text-center py-8">
               <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-lg text-muted-foreground">{t('workers.noWorkers')}</p>
@@ -185,16 +312,18 @@ export default function Workers() {
                   <TableRow className="border-border">
                     <TableHead className="text-foreground">{t('common.name')}</TableHead>
                     <TableHead className="text-foreground">{t('common.phone')}</TableHead>
-                    <TableHead className="text-foreground">{t('workers.dailyWage')}</TableHead>
+                    <TableHead className="text-foreground">Power Loom Number (1, 2, 3)</TableHead>
+                    <TableHead className="text-foreground">Role (Loom Operator, Mechanic, Loader)</TableHead>
                     <TableHead className="text-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {workers.map((worker) => (
-                    <TableRow key={worker.id} className="border-border hover:bg-accent">
+                    <TableRow key={worker._id} className="border-border hover:bg-accent">
                       <TableCell className="text-foreground font-medium">{worker.name}</TableCell>
                       <TableCell className="text-foreground">{worker.phone}</TableCell>
-                      <TableCell className="text-foreground">₹{worker.dailyWage}</TableCell>
+                      <TableCell className="text-foreground">{worker.powerLoomNumber ?? '-'}</TableCell>
+                      <TableCell className="text-foreground">{worker.role ?? '-'}</TableCell>
                       <TableCell>
                         <div className="flex gap-2">
                           <Button
@@ -208,7 +337,7 @@ export default function Workers() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleDelete(worker.id)}
+                            onClick={() => handleDelete(worker._id)}
                             className="border-border text-destructive hover:bg-destructive hover:text-destructive-foreground"
                           >
                             <Trash2 className="h-4 w-4" />

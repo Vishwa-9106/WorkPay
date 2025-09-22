@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px; 
+        }
+        .result { 
+            margin: 10px 0; 
+            padding: 10px; 
+            border-radius: 5px; 
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        button { 
+            background-color: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 5px; 
+        }
+        button:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>WorkPay CORS Test</h1>
+    <p>This page will test CORS connectivity to your backend API.</p>
+    
+    <button onclick="testCORS()">Test CORS Connection</button>
+    <button onclick="testWorkers()">Test Workers API</button>
+    <button onclick="addTestWorker()">Add Test Worker</button>
+    
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:5001/api';
+        const resultsDiv = document.getElementById('results');
+
+        function addResult(message, isSuccess = true) {
+            const div = document.createElement('div');
+            div.className = `result ${isSuccess ? 'success' : 'error'}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+            resultsDiv.appendChild(div);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        async function testCORS() {
+            try {
+                const response = await fetch(`${API_BASE}/cors-test`);
+                const data = await response.json();
+                addResult(`CORS Test Success: ${data.message} (Origin: ${data.origin})`);
+            } catch (error) {
+                addResult(`CORS Test Failed: ${error.message}`, false);
+            }
+        }
+
+        async function testWorkers() {
+            try {
+                const response = await fetch(`${API_BASE}/workers`);
+                const data = await response.json();
+                if (data.success) {
+                    addResult(`Workers API Success: Found ${data.count} workers`);
+                } else {
+                    addResult(`Workers API Error: ${data.error}`, false);
+                }
+            } catch (error) {
+                addResult(`Workers API Failed: ${error.message}`, false);
+            }
+        }
+
+        async function addTestWorker() {
+            const testWorker = {
+                name: `Test Worker ${Date.now()}`,
+                phone: `+1-555-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/workers`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testWorker)
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    addResult(`Worker Added Successfully: ${data.data.name} (${data.data.phone})`);
+                } else {
+                    addResult(`Add Worker Failed: ${data.error}`, false);
+                }
+            } catch (error) {
+                addResult(`Add Worker Error: ${error.message}`, false);
+            }
+        }
+
+        // Auto-run CORS test on page load
+        window.onload = () => {
+            addResult('Page loaded. Click buttons to test API connectivity.');
+            setTimeout(testCORS, 1000);
+        };
+    </script>
+</body>
+</html>
