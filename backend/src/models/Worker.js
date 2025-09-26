@@ -37,6 +37,12 @@ const workerSchema = new mongoose.Schema({
   notes: {
     type: String,
     maxlength: [500, 'Notes cannot exceed 500 characters']
+  },
+  // Salary for non-loom-operator roles (e.g., Mechanic, Loader) editable from UI
+  salary: {
+    type: Number,
+    default: 0,
+    min: [0, 'Salary cannot be negative']
   }
 }, {
   timestamps: true

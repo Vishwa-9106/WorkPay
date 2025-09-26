@@ -19,6 +19,7 @@ interface Worker {
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
+  salary?: number | null;
 }
 
 export default function Workers() {
@@ -29,11 +30,15 @@ export default function Workers() {
   const [editingWorker, setEditingWorker] = useState<Worker | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [formData, setFormData] = useState<{ name: string; phone: string; powerLoomNumber: string; role: string }>({
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [workerToDelete, setWorkerToDelete] = useState<Worker | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [formData, setFormData] = useState<{ name: string; phone: string; powerLoomNumber: string; role: string; salary: string }>({
     name: '',
     phone: '',
     powerLoomNumber: '',
     role: '',
+    salary: '',
   });
 
   // Fetch workers from API
@@ -68,7 +73,7 @@ export default function Workers() {
   }, []);
 
   const resetForm = () => {
-    setFormData({ name: '', phone: '', powerLoomNumber: '', role: '' });
+    setFormData({ name: '', phone: '', powerLoomNumber: '', role: '', salary: '' });
     setEditingWorker(null);
   };
 
@@ -95,6 +100,9 @@ export default function Workers() {
           phone: formData.phone,
           powerLoomNumber: formData.powerLoomNumber ? Number(formData.powerLoomNumber) : undefined,
           role: formData.role || undefined,
+          salary: formData.role === 'Mechanic' || formData.role === 'Loader'
+            ? (formData.salary !== '' ? Number(formData.salary) : 0)
+            : null,
         });
         
         // Update existing worker in local state
@@ -112,6 +120,10 @@ export default function Workers() {
           phone: formData.phone,
           powerLoomNumber: formData.powerLoomNumber ? Number(formData.powerLoomNumber) : undefined,
           role: formData.role || undefined,
+          // Note: backend create accepts salary field via Worker model, include only for Mechanic/Loader
+          ...(formData.role === 'Mechanic' || formData.role === 'Loader'
+            ? { salary: formData.salary !== '' ? Number(formData.salary) : 0 }
+            : { salary: null }),
         });
         
         // Add new worker to local state
@@ -152,36 +164,34 @@ export default function Workers() {
       phone: worker.phone,
       powerLoomNumber: worker.powerLoomNumber != null ? String(worker.powerLoomNumber) : '',
       role: worker.role ?? '',
+      salary: (worker.role === 'Mechanic' || worker.role === 'Loader') && worker.salary != null ? String(worker.salary) : '',
     });
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (workerId: string) => {
+  const openDeleteConfirm = (worker: Worker) => {
+    setWorkerToDelete(worker);
+    setConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!workerToDelete) return;
     try {
-      await workerApi.delete(workerId);
-      
-      // Remove worker from local state
-      setWorkers(workers.filter(w => w._id !== workerId));
-      
-      toast({
-        title: "Success",
-        description: "Worker deleted successfully",
-      });
+      setDeleting(true);
+      await workerApi.delete(workerToDelete._id);
+      setWorkers(prev => prev.filter(w => w._id !== workerToDelete._id));
+      setConfirmOpen(false);
+      setWorkerToDelete(null);
+      toast({ title: 'Success', description: 'Worker deleted successfully' });
     } catch (error) {
       console.error('Error deleting worker:', error);
       if (error instanceof ApiError) {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to delete worker. Please try again.",
-          variant: "destructive",
-        });
+        toast({ title: 'Error', description: 'Failed to delete worker. Please try again.', variant: 'destructive' });
       }
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -246,7 +256,7 @@ export default function Workers() {
                 <select
                   id="role"
                   value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value, salary: (e.target.value === 'Mechanic' || e.target.value === 'Loader') ? (formData.salary) : '' })}
                   className="bg-background border-input"
                   disabled={submitting}
                 >
@@ -256,6 +266,30 @@ export default function Workers() {
                   <option value="Loader">Loader</option>
                 </select>
               </div>
+              {(formData.role === 'Mechanic' || formData.role === 'Loader') && (
+                <div className="space-y-2">
+                  <Label htmlFor="salary" className="text-foreground">Salary</Label>
+                  <Input
+                    id="salary"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.salary}
+                    onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
+                    onWheel={(e) => { (e.currentTarget as HTMLInputElement).blur(); }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'PageUp' || e.key === 'PageDown') {
+                        e.preventDefault();
+                      }
+                    }}
+                    inputMode="decimal"
+                    placeholder="Enter salary"
+                    className="bg-background border-input"
+                    required
+                    disabled={submitting}
+                  />
+                </div>
+              )}
               <div className="flex justify-end gap-2 pt-4">
                 <Button 
                   type="button" 
@@ -281,6 +315,26 @@ export default function Workers() {
                 </Button>
               </div>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <DialogContent className="bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="text-foreground">Are you sure you want to delete this worker?</DialogTitle>
+            </DialogHeader>
+            <div className="text-muted-foreground">
+              {workerToDelete ? `${workerToDelete.name} (${workerToDelete.role ?? 'N/A'})` : ''}
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" className="border-border" onClick={() => { setConfirmOpen(false); setWorkerToDelete(null); }} disabled={deleting}>
+                Cancel
+              </Button>
+              <Button className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" onClick={confirmDelete} disabled={deleting}>
+                {deleting ? 'Deleting...' : 'Confirm'}
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
@@ -337,7 +391,7 @@ export default function Workers() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleDelete(worker._id)}
+                            onClick={() => openDeleteConfirm(worker)}
                             className="border-border text-destructive hover:bg-destructive hover:text-destructive-foreground"
                           >
                             <Trash2 className="h-4 w-4" />

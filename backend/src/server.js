@@ -107,6 +107,7 @@ const expenseRoutes = require('./routes/expenses');
 const productionRoutes = require('./routes/production');
 const powerloomProductionRoutes = require('./routes/powerloomProduction');
 const productRoutes = require('./routes/products');
+const exportLogsRoutes = require('./routes/exportLogs');
 
 // Use routes
 app.use('/api/workers', workerRoutes);
@@ -114,6 +115,7 @@ app.use('/api/expenses', expenseRoutes);
 app.use('/api/production', productionRoutes);
 app.use('/api/powerloom-production', powerloomProductionRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/export-logs', exportLogsRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

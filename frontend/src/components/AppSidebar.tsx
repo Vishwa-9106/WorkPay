@@ -55,6 +55,12 @@ export function AppSidebar() {
       url: "/workers",
       icon: Users,
     },
+    // 4.1 Salary Bonus (after Workers)
+    {
+      title: 'Weekly salary',
+      url: '/salary-bonus',
+      icon: Wallet,
+    },
     // 5. Expenses
     {
       title: t('nav.expenses'),

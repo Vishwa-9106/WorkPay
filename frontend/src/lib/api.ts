@@ -1,5 +1,5 @@
 // API configuration and utility functions
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -17,7 +17,7 @@ class ApiError extends Error {
 }
 
 // Generic API request function
-async function apiRequest<T>(
+export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
@@ -72,14 +72,17 @@ export const workerApi = {
     apiRequest(`/workers/${id}`),
 
   // Create new worker
-  create: (data: { name: string; phone: string; powerLoomNumber?: number; role?: string }): Promise<any> =>
+  create: (data: { name: string; phone: string; powerLoomNumber?: number; role?: string; salary?: number | null }): Promise<any> =>
     apiRequest('/workers', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
-  // Update worker
-  update: (id: string, data: { name: string; phone: string; powerLoomNumber?: number; role?: string }): Promise<any> =>
+  // Update worker (partial)
+  update: (
+    id: string,
+    data: Partial<{ name: string; phone: string; powerLoomNumber: number; role: string; salary: number }>
+  ): Promise<any> =>
     apiRequest(`/workers/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -140,6 +143,21 @@ export const powerloomProductionApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+};
+
+// Export Logs API
+export const exportLogsApi = {
+  // Create a new export log
+  create: (data: { workerId: string; fromDate: string; toDate: string; salary: number }): Promise<any> =>
+    apiRequest('/export-logs', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  // Get logs, optionally filter by workerId
+  getAll: (workerId?: string): Promise<any[]> => {
+    const qs = workerId ? `?workerId=${encodeURIComponent(workerId)}` : '';
+    return apiRequest(`/export-logs${qs}`);
+  },
 };
 
 // Export API configuration

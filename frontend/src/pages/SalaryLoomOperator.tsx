@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { ApiError, powerloomProductionApi, workerApi, productApi } from '@/lib/api';
+import { ApiError, powerloomProductionApi, workerApi, productApi, exportLogsApi } from '@/lib/api';
 
 interface Worker {
   _id: string;
@@ -127,12 +128,172 @@ export default function SalaryLoomOperator() {
     return Number(total.toFixed(2));
   }, [groupedByProduct, products]);
 
+  // Export current grouped tables to PDF in a cross-product x machine matrix per date
+  const handleExport = async () => {
+    try {
+      const [{ default: jsPDF }, autoTableModule] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable') as any,
+      ]);
+
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const marginX = 30;
+      let cursorY = 40;
+
+      // Top-center worker name in bold
+      const title = worker?.name || t('workers.title', 'Worker');
+      doc.setFontSize(16);
+      doc.setFont(undefined, 'bold');
+      doc.text(String(title), pageWidth / 2, cursorY, { align: 'center' });
+      doc.setFont(undefined, 'normal');
+      cursorY += 20;
+
+      // Build a unified table across products and machines for per-date rows
+      // 1) Determine products and their machine indices used
+      const productsInfo = groupedByProduct.map(p => ({
+        id: p.productId,
+        name: p.productName,
+        machines: Array.from(new Set(p.rows.flatMap(r => r.byMachine.filter(m => m.qty > 0).map(m => m.index)))).sort((a,b) => a-b),
+      }));
+
+      // 2) Collect all unique dates across all products
+      const allDateKeys = Array.from(new Set(groupedByProduct.flatMap(p => p.rows.map(r => r.dateStr)))).sort((a,b) => new Date(a).getTime() - new Date(b).getTime());
+
+      // 3) Build the head with two rows
+      const headRow1: any[] = [{ content: 'Product' }];
+      for (const p of productsInfo) {
+        headRow1.push({ content: p.name, colSpan: Math.max(p.machines.length, 1), styles: { halign: 'center', fontStyle: 'bold' } });
+      }
+      const headRow2: any[] = [{ content: 'Dates' }];
+      for (const p of productsInfo) {
+        if (p.machines.length === 0) {
+          headRow2.push({ content: '-', styles: { halign: 'center' } });
+        } else {
+          for (const m of p.machines) headRow2.push({ content: `Machine ${m}`, styles: { halign: 'center' } });
+        }
+      }
+
+      // 4) Body rows per date
+      const body: any[] = [];
+      // Precompute quantity map: productId -> dateKey -> machineIndex -> qty
+      const qMap = new Map<string, Map<string, Map<number, number>>>();
+      for (const p of groupedByProduct) {
+        const byDate = new Map<string, Map<number, number>>();
+        for (const r of p.rows) {
+          const mMap = new Map<number, number>();
+          for (const bm of r.byMachine) if (bm.qty > 0) mMap.set(bm.index, (mMap.get(bm.index) || 0) + bm.qty);
+          byDate.set(r.dateStr, mMap);
+        }
+        qMap.set(p.productId, byDate);
+      }
+
+      for (const date of allDateKeys) {
+        const row: any[] = [new Date(date).toLocaleDateString()];
+        for (const p of productsInfo) {
+          const byDate = qMap.get(p.id);
+          if (!p.machines.length) {
+            row.push('-');
+          } else {
+            for (const m of p.machines) {
+              const qty = byDate?.get(date)?.get(m) ?? 0;
+              row.push(qty || '-');
+            }
+          }
+        }
+        body.push(row);
+      }
+
+      // 4.1) Build Salary row (per-machine totals * workerSalary) and append as the last row
+      const salaryRow: any[] = [{ content: 'Salary', styles: { fontStyle: 'bold' } }];
+      for (const p of productsInfo) {
+        const productDetail = products.find(pp => pp._id === p.id);
+        const wSalary = productDetail?.workerSalary ?? 0;
+        if (!p.machines.length) {
+          salaryRow.push({ content: '-', styles: { halign: 'center', fontStyle: 'bold', fillColor: [245,245,245] } });
+        } else {
+          for (const m of p.machines) {
+            // Sum all quantities for this product & machine across all dates
+            let sumQty = 0;
+            for (const d of allDateKeys) {
+              sumQty += qMap.get(p.id)?.get(d)?.get(m) ?? 0;
+            }
+            const sal = Number((sumQty * wSalary).toFixed(2));
+            salaryRow.push({ content: sal, styles: { halign: 'center', fontStyle: 'bold', fillColor: [245,245,245] } });
+          }
+        }
+      }
+      body.push(salaryRow);
+
+      // 5) Render unified table
+      (autoTableModule as any).default(doc, {
+        head: [headRow1, headRow2],
+        body,
+        startY: cursorY,
+        theme: 'grid',
+        styles: { fontSize: 10, lineColor: [180,180,180], lineWidth: 0.5, cellPadding: 4 },
+        headStyles: { fillColor: [240,240,240], textColor: 20, lineColor: [120,120,120], lineWidth: 0.75 },
+        margin: { left: marginX, right: marginX },
+      });
+
+      // 6) Bottom-center total salary in bold
+      let endY = (doc as any).lastAutoTable?.finalY || cursorY + 20;
+      const footerY = Math.min(endY + 30, doc.internal.pageSize.getHeight() - 30);
+      doc.setFont(undefined, 'bold');
+      doc.text(`${t('salary.loomOperator.totalSalary', 'Total Salary')}: ${Math.round(totalSalary)}`, pageWidth / 2, footerY, { align: 'center' });
+      doc.setFont(undefined, 'normal');
+
+      const fileName = `loom-operator-${worker?.name || 'worker'}-${new Date().toISOString().slice(0,10)}.pdf`;
+      doc.save(fileName);
+
+      // Persist export summary to localStorage for Salary Bonus page and send to backend
+      try {
+        const fromDate = allDateKeys.length ? new Date(allDateKeys[0]).toISOString() : new Date().toISOString();
+        const toDate = allDateKeys.length ? new Date(allDateKeys[allDateKeys.length - 1]).toISOString() : new Date().toISOString();
+        const record = {
+          workerId: worker?._id || '',
+          workerName: worker?.name || 'Unknown',
+          fromDate,
+          toDate,
+          salary: Math.round(totalSalary),
+          createdAt: new Date().toISOString(),
+        };
+        const key = 'salaryBonusLogs';
+        const prev = JSON.parse(localStorage.getItem(key) || '[]');
+        prev.push(record);
+        localStorage.setItem(key, JSON.stringify(prev));
+
+        // Also create a persistent record in the backend DB
+        if (record.workerId) {
+          try {
+            await exportLogsApi.create({ workerId: record.workerId, fromDate: record.fromDate, toDate: record.toDate, salary: record.salary });
+            toast({ title: 'Export saved', description: 'Export summary stored in database.' });
+          } catch (e) {
+            console.warn('Failed to create export log in backend', e);
+            toast({ title: 'Warning', description: 'PDF exported but failed to save export summary in database.', variant: 'destructive' });
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to persist export log', e);
+      }
+    } catch (error) {
+      console.error('Export failed', error);
+      toast({ title: 'Error', description: 'Failed to export PDF', variant: 'destructive' });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-foreground">
           {worker ? `${t('salary.loomOperator.title', 'Workers of Loom Operator')} — ${worker.name}` : t('salary.loomOperator.title', 'Workers of Loom Operator')}
         </h1>
+        <Button
+          className="bg-gradient-primary hover:bg-primary-hover text-primary-foreground shadow-md"
+          onClick={handleExport}
+        >
+          {t('common.export', 'Export')}
+        </Button>
       </div>
       {/* Grouped by Company Product - one table per product with Date and Machines */}
       {groupedByProduct.length === 0 ? (
@@ -146,7 +307,7 @@ export default function SalaryLoomOperator() {
           {/* Total Salary Card (shown above the first table) */}
           <Card className="bg-gradient-card border-border shadow-md">
             <CardContent>
-              <div className="text-xl font-bold text-foreground">Total Salary: {totalSalary}</div>
+              <div className="text-xl font-bold text-foreground">Total Salary: {Math.round(totalSalary)}</div>
             </CardContent>
           </Card>
           {groupedByProduct.map(prod => (

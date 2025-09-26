@@ -4,6 +4,7 @@ import { workerApi, ApiError } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Users } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useNavigate } from 'react-router-dom';
 
 interface Worker {
@@ -44,8 +45,11 @@ export default function Salary() {
       if (!byRole[role]) byRole[role] = [];
       byRole[role].push(w);
     }
+    // Exclude roles Mechanic and Loader as per requirement
+    delete byRole['Mechanic'];
+    delete byRole['Loader'];
     // Keep a stable order: Loom Operator, Mechanic, Loader, Others, then any other roles alphabetically
-    const preferred = ['Loom Operator', 'Mechanic', 'Loader', 'Others'];
+    const preferred = ['Loom Operator', 'Others'];
     const keys = Array.from(new Set([...preferred, ...Object.keys(byRole).sort()]));
     return keys.filter(k => byRole[k]?.length).map(k => ({ role: k, items: byRole[k] }));
   }, [workers]);
@@ -107,8 +111,73 @@ export default function Salary() {
               </div>
             </div>
           ))}
+          {/* Mechanic & Loader Salary Table */}
+          <MechanicLoaderSalaryTable allWorkers={workers} onReload={async () => {
+            try {
+              const list = await workerApi.getAll();
+              setWorkers(list);
+            } catch (error) {
+              const msg = error instanceof ApiError ? error.message : 'Failed to reload workers';
+              toast({ title: 'Error', description: msg, variant: 'destructive' });
+            }
+          }} />
         </div>
       )}
+    </div>
+  );
+}
+
+function MechanicLoaderSalaryTable({ allWorkers, onReload }: { allWorkers: Worker[]; onReload: () => Promise<void> }) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+
+  // Filter mechanics and loaders; keep deterministic order by name
+  const rows = useMemo(() => {
+    const list = allWorkers.filter(w => (w.role === 'Mechanic' || w.role === 'Loader'))
+      .map(w => ({ ...w, salary: (w as any).salary ?? 0 }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return list;
+  }, [allWorkers]);
+
+  // Auto refresh polling and on focus
+  useEffect(() => {
+    const interval = window.setInterval(() => { onReload(); }, 5000);
+    const onFocus = () => { onReload(); };
+    window.addEventListener('focus', onFocus);
+    return () => { window.clearInterval(interval); window.removeEventListener('focus', onFocus); };
+  }, [onReload]);
+
+  // Salary is read-only in this table; values are pulled from the server and auto-refreshed
+
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      <h2 className="text-xl font-semibold text-foreground">{t('salary.mechanicLoaderTitle', 'Mechanic & Loader Salary')}</h2>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-border">
+              <TableHead className="text-foreground">S.No</TableHead>
+              <TableHead className="text-foreground">Worker</TableHead>
+              <TableHead className="text-foreground">Powerloom Number</TableHead>
+              <TableHead className="text-foreground">Salary</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((w, idx) => (
+              <TableRow key={w._id} className="border-border">
+                <TableCell className="text-foreground">{idx + 1}</TableCell>
+                <TableCell className="text-foreground">{w.name}</TableCell>
+                <TableCell className="text-foreground">{w.powerLoomNumber ?? '-'}</TableCell>
+                <TableCell className="text-foreground w-[220px] font-medium">
+                  {(w as any).salary ?? 0}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
