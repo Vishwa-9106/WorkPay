@@ -169,3 +169,42 @@ export const exportLogsApi = {
 // Export API configuration
 export { API_BASE_URL, ApiError };
 export type { ApiResponse };
+
+// Expenses API
+export const expensesApi = {
+  // Get all expenses with optional filters
+  getAll: (params?: { startDate?: string; endDate?: string; expenseType?: string; category?: string }): Promise<any[]> => {
+    const qs = params
+      ? `?${[
+          params.startDate ? `startDate=${encodeURIComponent(params.startDate)}` : '',
+          params.endDate ? `endDate=${encodeURIComponent(params.endDate)}` : '',
+          params.expenseType ? `expenseType=${encodeURIComponent(params.expenseType)}` : '',
+          params.category ? `category=${encodeURIComponent(params.category)}` : '',
+        ].filter(Boolean).join('&')}`
+      : '';
+    // This endpoint returns { data: expenses, count, total }, but apiRequest returns result.data
+    return apiRequest(`/expenses${qs}`);
+  },
+
+  // Create expense
+  create: (data: { date: string; expenseType: string; amount: number; description?: string; category?: string }): Promise<any> =>
+    apiRequest('/expenses', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  // Delete expense by id
+  delete: (id: string): Promise<void> =>
+    apiRequest(`/expenses/${id}`, {
+      method: 'DELETE',
+    }),
+};
+
+// Settings API (store simple app-wide settings like total revenue)
+export const settingsApi = {
+  getRevenue: (): Promise<{ value: number }> => apiRequest('/settings/revenue'),
+  setRevenue: (value: number): Promise<{ value: number }> =>
+    apiRequest('/settings/revenue', {
+      method: 'PUT',
+      body: JSON.stringify({ value }),
+    }),
+};

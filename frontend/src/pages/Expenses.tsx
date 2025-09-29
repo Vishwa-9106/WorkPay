@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,25 +6,43 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Receipt, Plus, Trash2, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { expensesApi, ApiError } from "@/lib/api";
 
-interface Expense {
-  id: string;
+const EXPENSE_TYPES = [
+  'Raw Materials',
+  'Equipment',
+  'Utilities',
+  'Labor',
+  'Maintenance',
+  'Transport',
+  'Office Supplies',
+  'Salary',
+  'Other',
+] as const;
+
+type ExpenseType = typeof EXPENSE_TYPES[number];
+
+interface ExpenseDoc {
+  _id: string;
   date: string;
-  expenseType: string;
+  expenseType: ExpenseType | string;
   amount: number;
+  description?: string;
 }
 
 export default function Expenses() {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [expenses, setExpenses] = useState<ExpenseDoc[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     expenseType: '',
     amount: '',
+    description: '',
   });
 
   const resetForm = () => {
@@ -32,44 +50,66 @@ export default function Expenses() {
       date: new Date().toISOString().split('T')[0],
       expenseType: '',
       amount: '',
+      description: '',
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Load expenses from backend
+  const loadExpenses = async () => {
+    try {
+      const list = await expensesApi.getAll();
+      setExpenses(list);
+    } catch (error) {
+      const msg = error instanceof ApiError ? error.message : 'Failed to load expenses';
+      toast({ title: 'Error', description: msg, variant: 'destructive' });
+    }
+  };
+
+  useEffect(() => {
+    loadExpenses();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!formData.date || !formData.expenseType || !formData.amount) {
-      toast({
-        title: "Error",
-        description: t('forms.required'),
-        variant: "destructive",
-      });
+      toast({ title: 'Error', description: t('forms.required'), variant: 'destructive' });
       return;
     }
-
-    const newExpense: Expense = {
-      id: Date.now().toString(),
-      date: formData.date,
-      expenseType: formData.expenseType,
-      amount: parseFloat(formData.amount),
-    };
-
-    setExpenses([...expenses, newExpense]);
-    resetForm();
-    setIsDialogOpen(false);
-
-    toast({
-      title: "Success",
-      description: "Expense added successfully",
-    });
+    if (!EXPENSE_TYPES.includes(formData.expenseType as ExpenseType)) {
+      toast({ title: 'Error', description: 'Please select a valid expense type', variant: 'destructive' });
+      return;
+    }
+    const amountNum = Number(formData.amount);
+    if (Number.isNaN(amountNum) || amountNum < 0) {
+      toast({ title: 'Error', description: 'Amount must be a non-negative number', variant: 'destructive' });
+      return;
+    }
+    try {
+      await expensesApi.create({
+        date: formData.date,
+        expenseType: formData.expenseType,
+        amount: amountNum,
+        description: formData.description?.trim() ? formData.description.trim() : undefined,
+      });
+      await loadExpenses();
+      resetForm();
+      setIsDialogOpen(false);
+      toast({ title: 'Success', description: 'Expense added successfully' });
+    } catch (error) {
+      const msg = error instanceof ApiError ? error.message : 'Failed to add expense';
+      toast({ title: 'Error', description: msg, variant: 'destructive' });
+    }
   };
 
-  const handleDelete = (expenseId: string) => {
-    setExpenses(expenses.filter(e => e.id !== expenseId));
-    toast({
-      title: "Success",
-      description: "Expense deleted successfully",
-    });
+  const handleDelete = async (expenseId: string) => {
+    try {
+      await expensesApi.delete(expenseId);
+      await loadExpenses();
+      toast({ title: 'Success', description: 'Expense deleted successfully' });
+    } catch (error) {
+      const msg = error instanceof ApiError ? error.message : 'Failed to delete expense';
+      toast({ title: 'Error', description: msg, variant: 'destructive' });
+    }
   };
 
   const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
@@ -82,7 +122,6 @@ export default function Expenses() {
           <h1 className="text-3xl font-bold text-foreground">{t('expenses.title')}</h1>
           <p className="text-muted-foreground">Track and manage business expenses</p>
         </div>
-        
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-gradient-primary hover:bg-primary-hover text-primary-foreground shadow-md">
@@ -107,11 +146,25 @@ export default function Expenses() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="expenseType" className="text-foreground">{t('expenses.expenseType')}</Label>
+                <Select value={formData.expenseType} onValueChange={(v) => setFormData({ ...formData, expenseType: v })}>
+                  <SelectTrigger className="bg-background border-input">
+                    <SelectValue placeholder="Select expense type" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border max-h-60 overflow-auto">
+                    {EXPENSE_TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description" className="text-foreground">Description</Label>
                 <Input
-                  id="expenseType"
-                  value={formData.expenseType}
-                  onChange={(e) => setFormData({ ...formData, expenseType: e.target.value })}
-                  placeholder="Enter expense type (e.g., Raw Materials, Fuel, Maintenance)"
+                  id="description"
+                  type="text"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="e.g., Electric bill for September"
                   className="bg-background border-input"
                 />
               </div>
@@ -128,9 +181,9 @@ export default function Expenses() {
                 />
               </div>
               <div className="flex justify-end gap-2 pt-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => {
                     resetForm();
                     setIsDialogOpen(false);
@@ -191,13 +244,14 @@ export default function Expenses() {
                   <TableRow className="border-border">
                     <TableHead className="text-foreground">{t('common.date')}</TableHead>
                     <TableHead className="text-foreground">{t('expenses.expenseType')}</TableHead>
+                    <TableHead className="text-foreground">Description</TableHead>
                     <TableHead className="text-foreground">{t('common.amount')}</TableHead>
                     <TableHead className="text-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {expenses.map((expense) => (
-                    <TableRow key={expense.id} className="border-border hover:bg-accent">
+                    <TableRow key={expense._id} className="border-border hover:bg-accent">
                       <TableCell className="text-foreground">
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -205,12 +259,13 @@ export default function Expenses() {
                         </div>
                       </TableCell>
                       <TableCell className="text-foreground font-medium">{expense.expenseType}</TableCell>
+                      <TableCell className="text-foreground">{expense.description || '-'}</TableCell>
                       <TableCell className="text-foreground">₹{expense.amount.toLocaleString()}</TableCell>
                       <TableCell>
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleDelete(expense.id)}
+                          onClick={() => handleDelete(expense._id)}
                           className="border-border text-destructive hover:bg-destructive hover:text-destructive-foreground"
                         >
                           <Trash2 className="h-4 w-4" />

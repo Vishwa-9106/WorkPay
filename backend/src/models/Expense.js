@@ -6,7 +6,7 @@ const expenseSchema = new mongoose.Schema({
     required: [true, 'Expense type is required'],
     trim: true,
     enum: {
-      values: ['Raw Materials', 'Equipment', 'Utilities', 'Labor', 'Maintenance', 'Transport', 'Office Supplies', 'Other'],
+      values: ['Raw Materials', 'Equipment', 'Utilities', 'Labor', 'Maintenance', 'Transport', 'Office Supplies', 'Salary', 'Other'],
       message: 'Please select a valid expense type'
     }
   },
