@@ -143,6 +143,12 @@ export const powerloomProductionApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  // Delete all production entries across looms 1-3
+  deleteAll: (): Promise<{ deletedCount: number }> =>
+    apiRequest('/powerloom-production', {
+      method: 'DELETE',
+    }),
 };
 
 // Export Logs API

@@ -80,4 +80,14 @@ router.post('/', async (req, res) => {
   }
 });
 
+// DELETE /api/powerloom-production - delete all records for looms 1,2,3
+router.delete('/', async (_req, res) => {
+  try {
+    const result = await PowerloomProduction.deleteMany({ loomNumber: { $in: [1, 2, 3] } });
+    res.json({ success: true, data: { deletedCount: result.deletedCount || 0 }, message: 'All powerloom production records deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server Error', message: error.message });
+  }
+});
+
 module.exports = router;

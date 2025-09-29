@@ -55,6 +55,7 @@ export default function Production() {
   const [open2, setOpen2] = useState(false);
   const [open3, setOpen3] = useState(false);
   const { toast } = useToast();
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   // Form state
   const [form, setForm] = useState<{
@@ -121,6 +122,22 @@ export default function Production() {
 
     loadData();
   }, []);
+
+  // Delete all production records across PowerLoom 1, 2, and 3
+  const handleDeleteAll = async () => {
+    try {
+      await powerloomProductionApi.deleteAll();
+      // Clear local tables
+      setEntries([]);
+      setEntries2([]);
+      setEntries3([]);
+      toast({ title: 'Success', description: 'All production data deleted successfully' });
+      setConfirmDeleteOpen(false);
+    } catch (error) {
+      const msg = error instanceof ApiError ? error.message : 'Failed to delete production data';
+      toast({ title: 'Error', description: msg, variant: 'destructive' });
+    }
+  };
 
   const saveProduction2 = async () => {
     if (!form2.workerId || !form2.date) {
@@ -322,6 +339,21 @@ export default function Production() {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <Button variant="destructive" onClick={() => setConfirmDeleteOpen(true)}>Delete</Button>
+      </div>
+
+      {confirmDeleteOpen && (
+        <div className="flex items-center justify-between p-4 border border-destructive/50 bg-destructive/10 rounded-md">
+          <div className="text-foreground">
+            Are you sure you want to delete all production records?
+          </div>
+          <div className="flex gap-2">
+            <Button variant="destructive" onClick={handleDeleteAll}>Confirm</Button>
+            <Button variant="outline" onClick={() => setConfirmDeleteOpen(false)}>Cancel</Button>
+          </div>
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card
           className="bg-gradient-card border-border shadow-md cursor-pointer hover:bg-accent/30 transition-colors"
